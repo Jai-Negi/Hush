@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Layer, Map, Marker, Source } from '@vis.gl/react-maplibre';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { routeBadge, worstIsFlagged } from '../badges';
+import { LocateIcon } from './icons';
 
 const MAP_STYLE =
   import.meta.env.VITE_MAP_STYLE || 'https://tiles.openfreemap.org/styles/positron';
@@ -37,9 +38,24 @@ function fitToPoints(map, points, { padding = 56, maxZoom = 16 } = {}) {
 }
 
 /** AC1.2.4: renders origin/destination and any routes US1.1 already produced.
- * Never recomputes routes — display only. */
-export function MapView({ routes, threshold = 100, selectedId, onSelect, from, to }) {
+ * Never recomputes routes — display only. Also renders refuge markers and
+ * the live "you are here" position when those features are in use. */
+export function MapView({
+  routes,
+  threshold = 100,
+  selectedId,
+  onSelect,
+  from,
+  to,
+  refuges,
+  onPlanRouteToRefuge,
+  liveLocation,
+  liveLocationTracking,
+  onToggleLiveLocation,
+  journeyActive,
+}) {
   const mapRef = useRef(null);
+  const [selectedRefuge, setSelectedRefuge] = useState(null);
 
   const routesGeoJson = useMemo(
     () => ({
@@ -67,10 +83,17 @@ export function MapView({ routes, threshold = 100, selectedId, onSelect, from, t
     [selected],
   );
 
-  // Fit without animation (no sudden motion). Prefer routes; else From/To pins.
+  // Fit without animation (no sudden motion). Prefer routes; else refuges +
+  // origin; else From/To pins.
   useEffect(() => {
     const map = mapRef.current?.getMap?.();
     if (!map) return;
+
+    // Screens swap instantly (no route/page transition), so a map mounting
+    // into a freshly-shown grid cell can read its container's size before
+    // CSS layout has settled, leaving the canvas narrower than its now-
+    // correctly-sized container. Force a resize before fitting to points.
+    map.resize();
 
     if (routes && routes.length > 0) {
       const points = [];
@@ -81,14 +104,40 @@ export function MapView({ routes, threshold = 100, selectedId, onSelect, from, t
       return;
     }
 
+    if (refuges && refuges.length > 0) {
+      const points = refuges.map((r) => [r.lon, r.lat]);
+      if (from) points.push([from.lon, from.lat]);
+      fitToPoints(map, points, { padding: 64, maxZoom: 17 });
+      return;
+    }
+
     const points = [];
     if (from) points.push([from.lon, from.lat]);
     if (to) points.push([to.lon, to.lat]);
     fitToPoints(map, points, { padding: 64, maxZoom: 15 });
-  }, [routes, from, to]);
+  }, [routes, refuges, from, to]);
+
+  // Journey mode: keep the device's live position centred as it updates.
+  // jumpTo, not flyTo/easeTo — an instant snap, not a sliding animation.
+  useEffect(() => {
+    const map = mapRef.current?.getMap?.();
+    if (!map || !journeyActive || !liveLocation) return;
+    map.jumpTo({ center: [liveLocation.lon, liveLocation.lat] });
+  }, [journeyActive, liveLocation]);
 
   return (
     <div className="map-shell">
+      {onToggleLiveLocation ? (
+        <button
+          type="button"
+          className={`locate-btn${liveLocationTracking ? ' locate-btn--active' : ''}`}
+          onClick={onToggleLiveLocation}
+          aria-pressed={liveLocationTracking}
+          title={liveLocationTracking ? 'Stop showing my location' : 'Show my location on the map'}
+        >
+          <LocateIcon size={19} />
+        </button>
+      ) : null}
       <Map
         ref={mapRef}
         initialViewState={MELBOURNE_CENTER}
@@ -156,11 +205,67 @@ export function MapView({ routes, threshold = 100, selectedId, onSelect, from, t
           </Marker>
         ) : null}
 
+        {liveLocation ? (
+          <Marker longitude={liveLocation.lon} latitude={liveLocation.lat} anchor="center">
+            <div className="you-are-here" aria-label="Your current location">
+              <span className="you-are-here__pulse" />
+              <span className="you-are-here__dot" />
+            </div>
+          </Marker>
+        ) : null}
+
         {selected?.worst && worstIsFlagged(selected, threshold) ? (
           <Marker longitude={selected.worst.lon} latitude={selected.worst.lat} anchor="left">
             <div className="worst-callout">
               <strong>{Math.round(selected.worst.value)} people/min</strong>
               <span>{selected.worst.street}</span>
+            </div>
+          </Marker>
+        ) : null}
+
+        {(refuges || []).map((r) => (
+          <Marker key={r.name} longitude={r.lon} latitude={r.lat} anchor="bottom">
+            <button
+              type="button"
+              className="map-pin-btn"
+              onClick={() => setSelectedRefuge(r)}
+              aria-label={`${r.name}, ${r.kind}`}
+            >
+              <span className="map-pin">
+                <span className="map-pin__dot map-pin__dot--refuge" />
+                <span className="map-pin__label">{r.name}</span>
+              </span>
+            </button>
+          </Marker>
+        ))}
+
+        {selectedRefuge ? (
+          <Marker longitude={selectedRefuge.lon} latitude={selectedRefuge.lat} anchor="top">
+            <div className="refuge-callout">
+              <strong>{selectedRefuge.name}</strong>
+              <span>{selectedRefuge.kind}</span>
+              <div className="refuge-callout__actions">
+                <button
+                  type="button"
+                  className="link-button"
+                  onClick={() =>
+                    onPlanRouteToRefuge?.({
+                      label: selectedRefuge.name,
+                      lat: selectedRefuge.lat,
+                      lon: selectedRefuge.lon,
+                    })
+                  }
+                >
+                  Take me there
+                </button>
+                <button
+                  type="button"
+                  className="link-button"
+                  onClick={() => setSelectedRefuge(null)}
+                >
+                  Close
+                </button>
+              </div>
             </div>
           </Marker>
         ) : null}

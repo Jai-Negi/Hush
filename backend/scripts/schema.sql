@@ -29,3 +29,15 @@ CREATE TABLE IF NOT EXISTS pedestrian_minute_count (
 -- haven't (re)seeded yet.
 
 CREATE INDEX IF NOT EXISTS idx_minute_count_datetime ON pedestrian_minute_count (sensing_datetime);
+
+CREATE TABLE IF NOT EXISTS refuge_spaces (
+    id   serial PRIMARY KEY,
+    name text NOT NULL,
+    kind text NOT NULL,
+    lat  double precision NOT NULL,
+    lon  double precision NOT NULL,
+    UNIQUE (name, kind)
+);
+-- Quiet-space finder: a filtered subset of the City of Melbourne Landmarks
+-- dataset (parks, libraries, places of worship, galleries/museums). Source
+-- data has no natural ID, hence the surrogate key + natural UNIQUE.

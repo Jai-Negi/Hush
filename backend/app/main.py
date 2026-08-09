@@ -2,8 +2,10 @@
 
 Endpoints:
   GET  /health            liveness (used by the keep-alive ping)
+  GET  /api/status        data freshness / configuration overview
   GET  /api/geocode       place search (database first, ORS Pelias, curated fallback)
   POST /api/routes        walking routes with sensory-load scoring
+  GET  /api/refuges       nearest quiet spaces
 """
 
 from __future__ import annotations
@@ -16,6 +18,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 from . import config, data_source, db, ors
+from .geo import haversine_m
 from .scoring import score_route
 
 logging.basicConfig(level=logging.INFO)
@@ -55,6 +58,19 @@ def _data_age_min(as_of: datetime | None) -> int | None:
 @app.get("/health")
 def health():
     return {"ok": True}
+
+
+@app.get("/api/status")
+def status():
+    readings, as_of, source = data_source.get_readings()
+    return {
+        "sensors_reporting": len(readings),
+        "data_source": source,
+        "data_as_of": as_of.isoformat() if as_of else None,
+        "data_age_min": _data_age_min(as_of),
+        "database_configured": bool(config.DATABASE_URL),
+        "ors_configured": bool(config.ORS_API_KEY),
+    }
 
 
 @app.get("/api/geocode")
@@ -119,3 +135,16 @@ def plan_routes(req: RouteRequest):
             "age_min": _data_age_min(as_of),
         },
     }
+
+
+@app.get("/api/refuges")
+def nearest_refuges(
+    lat: float = Query(ge=-90, le=90),
+    lon: float = Query(ge=-180, le=180),
+    limit: int = Query(default=10, ge=1, le=10),
+):
+    refuges = data_source.get_refuges()
+    for r in refuges:
+        r["distance_m"] = round(haversine_m(lat, lon, float(r["lat"]), float(r["lon"])))
+    refuges.sort(key=lambda r: r["distance_m"])
+    return {"refuges": refuges[:limit]}

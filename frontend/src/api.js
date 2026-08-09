@@ -38,3 +38,11 @@ export function planRoutes(from, to) {
 export function geocode(text) {
   return request(`/api/geocode?text=${encodeURIComponent(text)}`);
 }
+
+export function getStatus() {
+  return request('/api/status');
+}
+
+export function getRefuges(lat, lon, limit = 10) {
+  return request(`/api/refuges?lat=${lat}&lon=${lon}&limit=${limit}`);
+}

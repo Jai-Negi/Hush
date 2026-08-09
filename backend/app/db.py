@@ -78,6 +78,23 @@ def fetch_sensors() -> list[dict] | None:
         conn.close()
 
 
+def fetch_refuges() -> list[dict] | None:
+    conn = _connect()
+    if conn is None:
+        return None
+    try:
+        with conn:
+            rows = conn.execute(
+                "SELECT name, kind, lat, lon FROM refuge_spaces"
+            ).fetchall()
+        return rows or None
+    except Exception as exc:  # noqa: BLE001
+        log.warning("refuges query failed: %s", exc)
+        return None
+    finally:
+        conn.close()
+
+
 def search_landmarks(text: str, limit: int = 5) -> list[dict] | None:
     """Case-insensitive substring match over landmark.feature_name, or None
     if the DB is unusable/has no match (caller falls back to live geocoding).

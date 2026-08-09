@@ -80,3 +80,7 @@ def get_readings() -> tuple[dict[str, float], datetime | None, str]:
 
 def get_sensors() -> list[dict]:
     return db.fetch_sensors() or _load_fixture("sensor_locations")
+
+
+def get_refuges() -> list[dict]:
+    return db.fetch_refuges() or _load_fixture("refuge_spaces")
