@@ -13,6 +13,7 @@ CORS_ORIGINS: list[str] = [
 
 # --- User-supplied (see backend/.env.example) ---
 ORS_API_KEY: str | None = os.environ.get("ORS_API_KEY") or None
+DATABASE_URL: str | None = os.environ.get("DATABASE_URL") or None
 
 # --- Data sources ---
 ORS_BASE_URL = os.environ.get("ORS_BASE_URL", "https://api.openrouteservice.org")
