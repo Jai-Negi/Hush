@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { MapView } from './components/MapView';
 import { PlaceField } from './components/PlaceField';
 
 export default function App() {
@@ -82,6 +83,10 @@ export default function App() {
               <p>{error}</p>
             </div>
           ) : null}
+        </div>
+
+        <div className="layout__map">
+          <MapView from={from} to={to} />
         </div>
       </main>
     </div>

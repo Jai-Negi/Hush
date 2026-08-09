@@ -11,8 +11,11 @@
   --line-strong: #cfc9bd;
   --low: #2f5741;
   --low-bg: #e4ede5;
+  --high: #7a4218;
   --high-bg: #f4e6d9;
+  --nodata-bg: #eceae4;
   --focus: #3f5f8f;
+  --here: #5b5698;
   --radius: 12px;
   --measure: 62ch;
 }
@@ -111,14 +114,37 @@ input {
 
 .layout {
   flex: 1;
-  padding: 1rem;
-}
-
-.layout__panel {
-  max-width: 28rem;
   display: flex;
   flex-direction: column;
   gap: 1rem;
+  padding: 1rem;
+  width: 100%;
+  max-width: 1600px;
+  margin: 0 auto;
+}
+
+.layout__panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.layout__map {
+  min-width: 0;
+}
+
+/* Desktop: two calm, fixed panes. Nothing moves between breakpoints mid-use. */
+@media (min-width: 1024px) {
+  .layout {
+    display: grid;
+    grid-template-columns: 420px 1fr;
+    align-items: start;
+  }
+  .layout__map {
+    position: sticky;
+    top: 1rem;
+  }
 }
 
 .card {
@@ -221,4 +247,64 @@ input {
 
 .suggestions button:hover {
   background: var(--bg);
+}
+
+/* ---------- Map (AC1.2.4) ---------- */
+
+.map-shell {
+  position: relative;
+  height: 46vh;
+  min-height: 320px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--nodata-bg);
+}
+
+@media (min-width: 1024px) {
+  .map-shell {
+    height: min(86vh, 1050px);
+  }
+}
+
+.map-pin {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.map-pin__dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--ink);
+  border: 2.5px solid var(--surface);
+}
+
+.map-pin__dot--dest {
+  background: var(--focus);
+}
+
+.map-pin__label {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 0.05rem 0.45rem;
+  font-size: 0.78rem;
+  white-space: nowrap;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.worst-callout {
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border: 1.5px solid var(--high);
+  border-radius: 8px;
+  padding: 0.4rem 0.7rem;
+  font-size: 0.85rem;
+  max-width: 220px;
 }
