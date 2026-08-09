@@ -18,6 +18,18 @@ DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 
 SENSOR_LOCATIONS_DATASET = "pedestrian-counting-system-sensor-locations"
 PAST_HOUR_DATASET = "pedestrian-counting-system-past-hour-counts-per-minute"
+LANDMARKS_DATASET = (
+    "landmarks-and-places-of-interest-including-schools-theatres-health-services-spor"
+)
+
+# Landmark sub-themes suitable as low-stimulation refuge spaces.
+REFUGE_SUBTHEMES = {
+    "Informal Outdoor Facility (Park/Garden/Reserve)": "park",
+    "Library": "library",
+    "Church": "place of worship",
+    "Synagogue": "place of worship",
+    "Art Gallery/Museum": "gallery or museum",
+}
 
 
 def fetch_json(url: str):
@@ -62,6 +74,27 @@ def main() -> int:
     except Exception as exc:  # noqa: BLE001
         failures += 1
         print(f"FAILED {PAST_HOUR_DATASET}: {exc}", file=sys.stderr)
+
+    try:
+        landmarks = export_dataset(LANDMARKS_DATASET)
+        refuges = []
+        for lm in landmarks:
+            kind = REFUGE_SUBTHEMES.get(lm.get("sub_theme"))
+            coords = lm.get("co_ordinates") or {}
+            if kind and coords.get("lat") and coords.get("lon"):
+                refuges.append(
+                    {
+                        "name": lm["feature_name"],
+                        "kind": kind,
+                        "lat": coords["lat"],
+                        "lon": coords["lon"],
+                    }
+                )
+        refuges.sort(key=lambda r: (r["kind"], r["name"]))
+        save("refuge_spaces", refuges)
+    except Exception as exc:  # noqa: BLE001
+        failures += 1
+        print(f"FAILED {LANDMARKS_DATASET}: {exc}", file=sys.stderr)
 
     return 1 if failures else 0
 

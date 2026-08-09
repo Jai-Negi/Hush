@@ -85,3 +85,89 @@ export function SlidersIcon(props) {
     </Svg>
   );
 }
+
+/** Data freshness — a clock. */
+export function ClockIcon(props) {
+  return (
+    <Svg {...props}>
+      <circle cx="12" cy="12" r="8" />
+      <path d="M12 8v4l2.5 1.5" />
+    </Svg>
+  );
+}
+
+/** Quiet space — a hush / calm mark. */
+export function QuietIcon(props) {
+  return (
+    <Svg {...props}>
+      <path d="M4 15v-3a8 8 0 0 1 16 0v3" />
+      <path d="M4 15a2 2 0 0 0 2 2h1v-5H6a2 2 0 0 0-2 2Z" />
+      <path d="M20 15a2 2 0 0 1-2 2h-1v-5h1a2 2 0 0 1 2 2Z" />
+    </Svg>
+  );
+}
+
+/** Live location toggle — a crosshair. */
+export function LocateIcon(props) {
+  return (
+    <Svg {...props}>
+      <circle cx="12" cy="12" r="3" />
+      <path d="M12 3v3" />
+      <path d="M12 18v3" />
+      <path d="M3 12h3" />
+      <path d="M18 12h3" />
+    </Svg>
+  );
+}
+
+/** Plan a route — a path between two points. */
+export function RouteIcon(props) {
+  return (
+    <Svg {...props}>
+      <circle cx="5" cy="18" r="2" />
+      <circle cx="19" cy="6" r="2" />
+      <path d="M7 18c4 0 3-6 7-6s3-6 7-6" />
+    </Svg>
+  );
+}
+
+/** Crowd predictor (future) — a forecast trend line. */
+export function TrendIcon(props) {
+  return (
+    <Svg {...props}>
+      <path d="M4 17l5-5 4 4 7-8" />
+      <path d="M15 8h5v5" />
+    </Svg>
+  );
+}
+
+/** Helpline — a phone. */
+export function PhoneIcon(props) {
+  return (
+    <Svg {...props}>
+      <path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2C10.5 21 3 13.5 3 6a2 2 0 0 1 2-2Z" />
+    </Svg>
+  );
+}
+
+/** Chat helper (future) — a speech bubble. */
+export function ChatIcon(props) {
+  return (
+    <Svg {...props}>
+      <path d="M4 5h16v10H8l-4 4V5Z" />
+      <path d="M8 9h8" />
+      <path d="M8 12h5" />
+    </Svg>
+  );
+}
+
+/** FAQ — a question mark. */
+export function HelpIcon(props) {
+  return (
+    <Svg {...props}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M9.5 9a2.5 2.5 0 0 1 5 0c0 1.5-2 1.8-2 3.5" />
+      <path d="M12 17h.01" />
+    </Svg>
+  );
+}

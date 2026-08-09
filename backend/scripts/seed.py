@@ -30,6 +30,7 @@ def main() -> int:
         return 1
 
     sensors = load_fixture("sensor_locations")
+    refuges = load_fixture("refuge_spaces")
 
     with psycopg.connect(config.DATABASE_URL) as conn:
         conn.execute(SCHEMA)
@@ -72,8 +73,17 @@ def main() -> int:
                     if s.get("latitude") is not None
                 ],
             )
+            cur.executemany(
+                """
+                INSERT INTO refuge_spaces (name, kind, lat, lon)
+                VALUES (%s, %s, %s, %s)
+                ON CONFLICT (name, kind) DO UPDATE SET
+                    lat = EXCLUDED.lat, lon = EXCLUDED.lon
+                """,
+                [(r["name"], r["kind"], r["lat"], r["lon"]) for r in refuges],
+            )
 
-    print(f"seeded {len(sensors)} sensors")
+    print(f"seeded {len(sensors)} sensors and {len(refuges)} refuge spaces")
     return 0
 
 
