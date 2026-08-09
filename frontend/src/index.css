@@ -308,3 +308,86 @@ input {
   font-size: 0.85rem;
   max-width: 220px;
 }
+
+/* ---------- Favourites & threshold (AC1.2.2–1.2.3, AC1.2.5) ---------- */
+
+.favourites {
+  margin: 0.6rem 0;
+}
+
+.favourites ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.favourites li {
+  display: flex;
+  gap: 0.2rem;
+}
+
+.chip {
+  min-height: 44px;
+  padding: 0.3rem 0.8rem;
+  border: 1.5px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  cursor: pointer;
+}
+
+.chip--remove {
+  color: var(--ink-soft);
+  font-size: 0.85rem;
+}
+
+.threshold {
+  position: relative;
+}
+
+.threshold__summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 44px;
+  padding: 0.4rem 0.9rem;
+  border: 1.5px solid var(--line-strong);
+  border-radius: 999px;
+  background: var(--surface);
+  cursor: pointer;
+}
+
+.threshold__panel {
+  position: absolute;
+  right: 0;
+  margin-top: 0.4rem;
+  z-index: 30;
+  width: min(340px, calc(100vw - 2rem));
+  background: var(--surface);
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius);
+  padding: 1rem;
+}
+
+.threshold__inputs {
+  display: flex;
+  gap: 0.8rem;
+  align-items: center;
+  margin: 0.6rem 0;
+}
+
+.threshold__inputs input[type='range'] {
+  flex: 1;
+  accent-color: var(--ink);
+  min-height: 44px;
+}
+
+.threshold__inputs input[type='number'] {
+  width: 5.5rem;
+  min-height: 44px;
+  padding: 0.4rem 0.5rem;
+  border: 1.5px solid var(--line);
+  border-radius: 8px;
+}

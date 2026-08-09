@@ -41,3 +41,17 @@ export function FlagIcon(props) {
     </Svg>
   );
 }
+
+/** Threshold control — adjustable sliders. */
+export function SlidersIcon(props) {
+  return (
+    <Svg {...props}>
+      <path d="M4 8h11" />
+      <path d="M19 8h1" />
+      <circle cx="17" cy="8" r="2" />
+      <path d="M4 16h5" />
+      <path d="M13 16h7" />
+      <circle cx="11" cy="16" r="2" />
+    </Svg>
+  );
+}

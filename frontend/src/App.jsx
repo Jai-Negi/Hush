@@ -1,8 +1,12 @@
 import { useEffect, useState } from 'react';
 import { MapView } from './components/MapView';
 import { PlaceField } from './components/PlaceField';
+import { ThresholdControl } from './components/ThresholdControl';
+import { useLocalStorage } from './hooks/useLocalStorage';
 
 export default function App() {
+  const [threshold, setThreshold] = useLocalStorage('hush-threshold', 100);
+  const [favourites, setFavourites] = useLocalStorage('hush-favourites', []);
   const [from, setFrom] = useState(null);
   const [to, setTo] = useState(null);
   const [error, setError] = useState(null);
@@ -44,6 +48,18 @@ export default function App() {
     );
   }
 
+  // AC1.2.5: favourites stay on this device only — no login.
+  function saveFavourite(place) {
+    if (!place) return;
+    setFavourites((prev) =>
+      prev.some((p) => p.label === place.label) ? prev : [...prev, place].slice(-8),
+    );
+  }
+
+  function removeFavourite(label) {
+    setFavourites((prev) => prev.filter((p) => p.label !== label));
+  }
+
   return (
     <div className="app">
       <header className="app-header">
@@ -51,6 +67,7 @@ export default function App() {
           <span className="logo">hush</span>
           <span className="logo-sub">Sensory-aware wayfinding · Melbourne CBD</span>
         </div>
+        <ThresholdControl threshold={threshold} onChange={setThreshold} />
       </header>
 
       <main className="layout">
@@ -71,6 +88,44 @@ export default function App() {
             />
             <PlaceField id="to" label="To" value={to} onSelect={setTo} />
 
+            {favourites.length > 0 ? (
+              <div className="favourites">
+                <p className="field-note">Saved places (kept on this device):</p>
+                <ul>
+                  {favourites.map((p) => (
+                    <li key={p.label}>
+                      <button
+                        type="button"
+                        className="chip"
+                        onClick={() => (from ? setTo(p) : setFrom(p))}
+                        title={from ? 'Use as destination' : 'Use as start'}
+                      >
+                        {p.label}
+                      </button>
+                      <button
+                        type="button"
+                        className="chip chip--remove"
+                        aria-label={`Remove ${p.label} from saved places`}
+                        onClick={() => removeFavourite(p.label)}
+                      >
+                        Remove
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+
+            {to ? (
+              <button
+                type="button"
+                className="link-button"
+                onClick={() => saveFavourite(to)}
+              >
+                Save “{to.label}” to this device
+              </button>
+            ) : null}
+
             {from && to ? (
               <p className="field-note" role="status">
                 From {from.label} to {to.label}. Route finding comes next.
@@ -86,7 +141,7 @@ export default function App() {
         </div>
 
         <div className="layout__map">
-          <MapView from={from} to={to} />
+          <MapView from={from} to={to} threshold={threshold} />
         </div>
       </main>
     </div>
