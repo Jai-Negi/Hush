@@ -1,27 +1,37 @@
 """OpenRouteService client: walking routes with alternatives.
 
-Route responses are cached in memory per origin/destination pair. If ORS
-fails and nothing is cached yet, a RouteServiceError is raised and the API
-returns a plain-language error — we never fabricate route geometry.
+Fallback behaviour ("the demo must not die"):
+- Route responses are cached in memory per origin/destination pair.
+- If ORS fails and a baked fallback file exists (backend/data/ors_fallback_routes.json,
+  created with scripts/make_ors_fallback.py), any request whose origin and
+  destination are within 200 m of the baked pair is served from it, clearly
+  labelled route_source="fallback".
+- Otherwise a RouteServiceError is raised and the API returns a plain-language
+  error the frontend shows inline. We never fabricate route geometry.
 """
 
 from __future__ import annotations
 
+import json
 import logging
 import time
 
 import httpx
 
 from . import config
+from .geo import haversine_m
 
 log = logging.getLogger(__name__)
 
 
 class RouteServiceError(Exception):
-    """Raised when no route source (live or cache) can answer."""
+    """Raised when no route source (live, cache, or fallback) can answer."""
 
 
 _route_cache: dict[tuple, dict] = {}
+
+FALLBACK_FILE = config.DATA_DIR / "ors_fallback_routes.json"
+FALLBACK_MATCH_M = 200.0
 
 
 def _cache_key(from_lat, from_lon, to_lat, to_lon) -> tuple:
@@ -57,6 +67,25 @@ def _parse_geojson(feature_collection: dict) -> list[dict]:
     return routes
 
 
+def _try_fallback(from_lat, from_lon, to_lat, to_lon) -> list[dict] | None:
+    if not FALLBACK_FILE.exists():
+        return None
+    try:
+        doc = json.loads(FALLBACK_FILE.read_text(encoding="utf-8"))
+        baked_from = doc["from"]
+        baked_to = doc["to"]
+        if (
+            haversine_m(from_lat, from_lon, baked_from["lat"], baked_from["lon"])
+            <= FALLBACK_MATCH_M
+            and haversine_m(to_lat, to_lon, baked_to["lat"], baked_to["lon"])
+            <= FALLBACK_MATCH_M
+        ):
+            return _parse_geojson(doc["response"])
+    except Exception as exc:  # noqa: BLE001
+        log.warning("fallback route file unusable: %s", exc)
+    return None
+
+
 def fetch_routes_raw(from_lat, from_lon, to_lat, to_lon) -> dict:
     """One live ORS call returning the raw GeoJSON FeatureCollection."""
     if not config.ORS_API_KEY:
@@ -80,7 +109,7 @@ def fetch_routes_raw(from_lat, from_lon, to_lat, to_lon) -> dict:
 
 
 def get_routes(from_lat, from_lon, to_lat, to_lon) -> tuple[list[dict], str]:
-    """Returns (routes, route_source) where route_source is live|cache."""
+    """Returns (routes, route_source) where route_source is live|cache|fallback."""
     key = _cache_key(from_lat, from_lon, to_lat, to_lon)
     cached = _route_cache.get(key)
     if cached and time.monotonic() - cached["at"] < config.ROUTE_CACHE_TTL_S:
@@ -97,4 +126,8 @@ def get_routes(from_lat, from_lon, to_lat, to_lon) -> tuple[list[dict], str]:
     if cached:  # expired cache beats nothing
         return cached["routes"], "cache"
 
-    raise RouteServiceError("route service unavailable")
+    fallback = _try_fallback(from_lat, from_lon, to_lat, to_lon)
+    if fallback:
+        return fallback, "fallback"
+
+    raise RouteServiceError("route service unavailable and no fallback matches")
