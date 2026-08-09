@@ -1,3 +1,7 @@
+/* hush — sensory-first stylesheet (AC1.2.1 shell + place search).
+   Principles: predictable, low-stimulation, user in control, literal, honest.
+   No animation. Muted palette. Colour is never the only signal. */
+
 :root {
   --bg: #f2efe8;
   --surface: #faf8f2;
@@ -13,16 +17,73 @@
   --nodata: #4f4c47;
   --nodata-bg: #eceae4;
   --focus: #3f5f8f;
+  --here: #5b5698;
   --radius: 12px;
+  --measure: 62ch;
 }
 
-* { box-sizing: border-box; }
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: auto;
+}
 
 body {
   margin: 0;
-  font-family: 'Atkinson Hyperlegible', sans-serif;
   background: var(--bg);
   color: var(--ink);
+  font-family:
+    'Atkinson Hyperlegible',
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    sans-serif;
+  font-size: 18px;
+  line-height: 1.6;
+  letter-spacing: 0.01em;
+  -webkit-font-smoothing: antialiased;
+}
+
+p,
+.field-note {
+  max-width: var(--measure);
+  text-align: left;
+}
+
+*,
+*::before,
+*::after {
+  animation: none !important;
+  transition: none !important;
+}
+
+h1 {
+  font-size: 1.35rem;
+  line-height: 1.25;
+  margin: 0 0 0.5rem;
+}
+
+p {
+  margin: 0 0 0.5rem;
+}
+
+button,
+input {
+  font: inherit;
+  color: inherit;
+}
+
+:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.icon {
+  flex-shrink: 0;
+  vertical-align: middle;
 }
 
 .app {
@@ -32,6 +93,11 @@ body {
 }
 
 .app-header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  align-items: center;
+  justify-content: space-between;
   padding: 0.9rem 1rem;
   background: var(--surface);
   border-bottom: 1px solid var(--line);
@@ -40,6 +106,12 @@ body {
 .logo {
   font-weight: 700;
   font-size: 1.3rem;
+  margin-right: 0.6rem;
+}
+
+.logo-sub {
+  color: var(--ink-soft);
+  font-size: 0.9rem;
 }
 
 .layout {
@@ -49,15 +121,65 @@ body {
   gap: 1rem;
   padding: 1rem;
   width: 100%;
-  max-width: 640px;
+  max-width: 1600px;
   margin: 0 auto;
+}
+
+.layout__panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.layout__map {
+  min-width: 0;
+}
+
+/* Desktop: two calm, fixed panes. Nothing moves between breakpoints mid-use. */
+@media (min-width: 1024px) {
+  .layout {
+    display: grid;
+    grid-template-columns: 420px 1fr;
+    align-items: start;
+  }
+  .layout__map {
+    position: sticky;
+    top: 1rem;
+  }
 }
 
 .card {
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  padding: 1rem;
+  padding: 1.25rem;
+}
+
+.link-button {
+  background: none;
+  border: none;
+  padding: 0.4rem 0;
+  min-height: 44px;
+  color: var(--focus);
+  text-decoration: underline;
+  cursor: pointer;
+  text-align: left;
+}
+
+.notice {
+  display: flex;
+  gap: 0.6rem;
+  align-items: flex-start;
+  background: var(--high-bg);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  padding: 0.8rem 1rem;
+  color: var(--ink);
+}
+
+.notice p {
+  margin: 0;
 }
 
 .field-note {
@@ -81,13 +203,6 @@ body {
 .button:disabled {
   opacity: 0.6;
   cursor: wait;
-}
-
-.notice {
-  background: var(--high-bg);
-  color: var(--high);
-  border-radius: var(--radius);
-  padding: 0.8rem 1rem;
 }
 
 /* ---------- Route cards ---------- */
@@ -237,4 +352,213 @@ body {
   color: var(--high);
   font-weight: 700;
   font-size: 0.8rem;
+}
+
+/* ---------- Place search (AC1.2.1) ---------- */
+
+.place-field {
+  margin-bottom: 0.9rem;
+  position: relative;
+}
+
+.place-field__head {
+  display: flex;
+  gap: 0.5rem;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.place-field label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--ink);
+  margin-bottom: 0.35rem;
+}
+
+.tag {
+  font-size: 0.78rem;
+  background: var(--low-bg);
+  color: var(--low);
+  border-radius: 999px;
+  padding: 0.1rem 0.6rem;
+}
+
+.place-field input {
+  width: 100%;
+  min-height: 48px;
+  padding: 0.6rem 0.8rem;
+  border: 1.5px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+}
+
+.suggestions {
+  list-style: none;
+  margin: 0.25rem 0 0;
+  padding: 0.25rem;
+  border: 1.5px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+}
+
+.suggestions button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 0.6rem 0.8rem;
+  min-height: 44px;
+  background: none;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.suggestions button:hover {
+  background: var(--bg);
+}
+
+/* ---------- Map (AC1.2.4) ---------- */
+
+.map-shell {
+  position: relative;
+  height: 46vh;
+  min-height: 320px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--nodata-bg);
+}
+
+@media (min-width: 1024px) {
+  .map-shell {
+    height: min(86vh, 1050px);
+  }
+}
+
+.map-pin {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.map-pin__dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--ink);
+  border: 2.5px solid var(--surface);
+}
+
+.map-pin__dot--dest {
+  background: var(--focus);
+}
+
+.map-pin__label {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 0.05rem 0.45rem;
+  font-size: 0.78rem;
+  white-space: nowrap;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.worst-callout {
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border: 1.5px solid var(--high);
+  border-radius: 8px;
+  padding: 0.4rem 0.7rem;
+  font-size: 0.85rem;
+  max-width: 220px;
+}
+
+/* ---------- Favourites & threshold (AC1.2.2–1.2.3, AC1.2.5) ---------- */
+
+.favourites {
+  margin: 0.6rem 0;
+}
+
+.favourites ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.favourites li {
+  display: flex;
+  gap: 0.2rem;
+}
+
+.chip {
+  min-height: 44px;
+  padding: 0.3rem 0.8rem;
+  border: 1.5px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  cursor: pointer;
+}
+
+.chip--remove {
+  color: var(--ink-soft);
+  font-size: 0.85rem;
+}
+
+.threshold {
+  position: relative;
+}
+
+.threshold__summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 44px;
+  padding: 0.4rem 0.9rem;
+  border: 1.5px solid var(--line-strong);
+  border-radius: 999px;
+  background: var(--surface);
+  cursor: pointer;
+}
+
+.threshold__panel {
+  position: absolute;
+  right: 0;
+  margin-top: 0.4rem;
+  z-index: 30;
+  width: min(340px, calc(100vw - 2rem));
+  background: var(--surface);
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius);
+  padding: 1rem;
+}
+
+.threshold__inputs {
+  display: flex;
+  gap: 0.8rem;
+  align-items: center;
+  margin: 0.6rem 0;
+}
+
+.threshold__inputs input[type='range'] {
+  flex: 1;
+  accent-color: var(--ink);
+  min-height: 44px;
+}
+
+.threshold__inputs input[type='number'] {
+  width: 5.5rem;
+  min-height: 44px;
+  padding: 0.4rem 0.5rem;
+  border: 1.5px solid var(--line);
+  border-radius: 8px;
 }

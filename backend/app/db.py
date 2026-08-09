@@ -1,6 +1,8 @@
 """Optional Postgres access. If DATABASE_URL is unset or the database is
-unreachable, every function returns None and callers fall back to the live
-feed or the bundled snapshot. The app must never crash because of the DB."""
+unreachable, every function returns None and callers fall back — readings
+fall back to the live feed then the bundled snapshot; landmark search falls
+back to live ORS geocode then the curated places list. The app must never
+crash because of the DB."""
 
 from __future__ import annotations
 
@@ -71,6 +73,33 @@ def fetch_sensors() -> list[dict] | None:
         return rows or None
     except Exception as exc:  # noqa: BLE001
         log.warning("sensors query failed: %s", exc)
+        return None
+    finally:
+        conn.close()
+
+
+def search_landmarks(text: str, limit: int = 5) -> list[dict] | None:
+    """Case-insensitive substring match over landmark.feature_name, or None
+    if the DB is unusable/has no match (caller falls back to live geocoding).
+    """
+    conn = _connect()
+    if conn is None:
+        return None
+    try:
+        with conn:
+            rows = conn.execute(
+                """
+                SELECT feature_name, latitude, longitude
+                FROM landmark
+                WHERE feature_name ILIKE %s
+                ORDER BY feature_name
+                LIMIT %s
+                """,
+                (f"%{text}%", limit),
+            ).fetchall()
+        return rows or None
+    except Exception as exc:  # noqa: BLE001
+        log.warning("landmark search failed: %s", exc)
         return None
     finally:
         conn.close()

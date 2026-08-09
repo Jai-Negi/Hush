@@ -34,3 +34,7 @@ export function planRoutes(from, to) {
     }),
   });
 }
+
+export function geocode(text) {
+  return request(`/api/geocode?text=${encodeURIComponent(text)}`);
+}

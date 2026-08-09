@@ -1,8 +1,9 @@
 """Hush API — sensory-aware wayfinding for Melbourne CBD.
 
 Endpoints:
-  GET  /health          liveness (used by the keep-alive ping)
-  POST /api/routes      walking routes with sensory-load scoring
+  GET  /health            liveness (used by the keep-alive ping)
+  GET  /api/geocode       place search (database first, ORS Pelias, curated fallback)
+  POST /api/routes        walking routes with sensory-load scoring
 """
 
 from __future__ import annotations
@@ -10,11 +11,11 @@ from __future__ import annotations
 import logging
 from datetime import datetime, timezone
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
-from . import config, data_source, ors
+from . import config, data_source, db, ors
 from .scoring import score_route
 
 logging.basicConfig(level=logging.INFO)
@@ -54,6 +55,24 @@ def _data_age_min(as_of: datetime | None) -> int | None:
 @app.get("/health")
 def health():
     return {"ok": True}
+
+
+@app.get("/api/geocode")
+def geocode(text: str = Query(min_length=2, max_length=100)):
+    # DB first — never call ORS when landmarks already answer the query.
+    db_hits = db.search_landmarks(text)
+    if db_hits:
+        return {
+            "results": [
+                {
+                    "label": r["feature_name"],
+                    "lat": float(r["latitude"]),
+                    "lon": float(r["longitude"]),
+                }
+                for r in db_hits
+            ]
+        }
+    return {"results": ors.geocode(text)}
 
 
 @app.post("/api/routes")
