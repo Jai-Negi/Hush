@@ -39,6 +39,52 @@ def point_to_segment_m(
     return math.hypot(px - cx, py - cy)
 
 
+def polyline_length_m(coords: list[tuple[float, float]]) -> float:
+    """coords as (lon, lat) pairs, GeoJSON order."""
+    total = 0.0
+    for (lon1, lat1), (lon2, lat2) in zip(coords, coords[1:]):
+        total += haversine_m(lat1, lon1, lat2, lon2)
+    return total
+
+
+def _densify(
+    coords: list[tuple[float, float]], max_edge_m: float
+) -> list[tuple[float, float]]:
+    """Insert interpolated points so no edge exceeds max_edge_m. Linear
+    interpolation is fine at CBD scale."""
+    out = [coords[0]]
+    for (lon1, lat1), (lon2, lat2) in zip(coords, coords[1:]):
+        edge = haversine_m(lat1, lon1, lat2, lon2)
+        n = max(1, math.ceil(edge / max_edge_m))
+        for i in range(1, n + 1):
+            out.append((lon1 + (lon2 - lon1) * i / n, lat1 + (lat2 - lat1) * i / n))
+    return out
+
+
+def chunk_polyline(
+    coords: list[tuple[float, float]], target_m: float
+) -> list[list[tuple[float, float]]]:
+    """Split a (lon, lat) polyline into consecutive chunks of roughly target_m
+    length. Long edges are densified first so chunk sizes stay near the target;
+    chunks share boundary vertices so no part of the route is lost."""
+    if len(coords) < 2:
+        return [coords] if coords else []
+    points = _densify(coords, target_m / 2)
+    chunks: list[list[tuple[float, float]]] = []
+    current: list[tuple[float, float]] = [points[0]]
+    acc = 0.0
+    for (lon1, lat1), (lon2, lat2) in zip(points, points[1:]):
+        acc += haversine_m(lat1, lon1, lat2, lon2)
+        current.append((lon2, lat2))
+        if acc >= target_m:
+            chunks.append(current)
+            current = [(lon2, lat2)]
+            acc = 0.0
+    if len(current) > 1:
+        chunks.append(current)
+    return chunks
+
+
 def min_distance_to_polyline_m(
     lat: float, lon: float, coords: list[tuple[float, float]]
 ) -> float:

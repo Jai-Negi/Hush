@@ -25,6 +25,7 @@ PAST_HOUR_DATASET = "pedestrian-counting-system-past-hour-counts-per-minute"
 # --- Behaviour tuning ---
 ROUTE_CACHE_TTL_S = 600  # in-memory cache of ORS responses per origin/destination
 SENSOR_MATCH_RADIUS_M = 50.0  # AC 1.1.2: sensors within 50 m of the path
+SEGMENT_LENGTH_M = 120.0  # route is chunked into ~120 m segments for no-data reporting
 READING_WINDOW_MIN = 20  # people/min averaged over the most recent N minutes
 FEED_CACHE_TTL_S = 300  # in-memory cache of the live feed
 DB_READINGS_MAX_AGE_MIN = 120  # DB readings older than this fall through to next source
