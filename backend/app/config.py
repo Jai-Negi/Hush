@@ -20,5 +20,7 @@ ORS_BASE_URL = os.environ.get("ORS_BASE_URL", "https://api.openrouteservice.org"
 
 # --- Behaviour tuning ---
 ROUTE_CACHE_TTL_S = 600  # in-memory cache of ORS responses per origin/destination
+SENSOR_MATCH_RADIUS_M = 50.0  # AC 1.1.2: sensors within 50 m of the path
+READING_WINDOW_MIN = 20  # people/min averaged over the most recent N minutes
 
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
