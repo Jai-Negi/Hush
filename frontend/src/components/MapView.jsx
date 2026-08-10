@@ -57,6 +57,19 @@ export function MapView({
   const mapRef = useRef(null);
   const [selectedRefuge, setSelectedRefuge] = useState(null);
 
+  useEffect(() => {
+    const map = mapRef.current?.getMap?.();
+    const container = map?.getContainer?.();
+    if (!map || !container) return;
+
+    const observer = new ResizeObserver(() => {
+      map.resize();
+    });
+    observer.observe(container);
+
+    return () => observer.disconnect();
+  }, []);
+
   const routesGeoJson = useMemo(
     () => ({
       type: 'FeatureCollection',
