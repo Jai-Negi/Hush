@@ -87,8 +87,7 @@ export function Home({ onNavigate }) {
           </a>
           <button type="button" className="support-pill" disabled>
             <ChatIcon size={18} />
-            Chat helper
-            <span className="home-card__badge">Coming later</span>
+            Chat
           </button>
           <button
             type="button"
