@@ -1,8 +1,17 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Layer, Map, Marker, Source } from '@vis.gl/react-maplibre';
+import { setWorkerUrl } from 'maplibre-gl';
+import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { routeBadge, worstIsFlagged } from '../badges';
 import { LocateIcon } from './icons';
+
+// MapLibre resolves its worker URL by appending the literal filename
+// "maplibre-gl-worker.mjs" to its own chunk's import.meta.url — a path
+// Vite's production build never emits, since that reference is invisible
+// to Rollup's static analysis. Without this, the worker request 404s and
+// tiles never composite, even though the style/tile requests succeed.
+setWorkerUrl(workerUrl);
 
 const MAP_STYLE =
   import.meta.env.VITE_MAP_STYLE || 'https://tiles.openfreemap.org/styles/positron';
