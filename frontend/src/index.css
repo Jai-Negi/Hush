@@ -87,7 +87,11 @@ input {
 }
 
 .app {
+  /* vh on mobile measures the viewport with the URL bar hidden, so 100vh is
+     taller than what is actually visible and the page starts scrolled-short.
+     dvh tracks the real viewport; the vh line stays first as the fallback. */
   min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   flex-direction: column;
 }
@@ -284,7 +288,10 @@ input {
 
 .legend {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  /* minmax(220px, …) keeps a 220px track even when the container is narrower,
+     which pushes the legend past the screen edge on a 320-375px phone. The
+     min() lets the track shrink to the container instead. */
+  grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
   gap: 0.6rem 1rem;
   background: var(--surface);
   border: 1px solid var(--line);
@@ -430,7 +437,10 @@ input {
 
 .map-shell {
   position: relative;
+  /* Same vh problem as .app, and worse here: when the URL bar hides or shows,
+     a vh-sized map changes height mid-gesture and MapLibre has to re-fit. */
   height: 46vh;
+  height: 46dvh;
   min-height: 320px;
   border: 1px solid var(--line);
   border-radius: var(--radius);
@@ -541,7 +551,11 @@ input {
   right: 0;
   margin-top: 0.4rem;
   z-index: 30;
-  width: min(340px, calc(100vw - 2rem));
+  /* 100vw includes the scrollbar, so calc(100vw - 2rem) can still be wider
+     than the content box and nudge a horizontal scrollbar into existence.
+     Clamping to the panel's own container avoids that on every screen. */
+  width: min(340px, calc(100% + 2rem));
+  max-width: calc(100vw - 1.5rem);
   background: var(--surface);
   border: 1.5px solid var(--line);
   border-radius: var(--radius);
@@ -694,6 +708,41 @@ input {
   padding: 1rem;
 }
 
+/* A locked 1:1 box cannot grow for its text. In a two-column grid on a 360-390px
+   phone each square is only ~155px wide, and icon + title + description + badge
+   at an 18px base font overflows it — the label spills past the border. Below
+   this width the square becomes a minimum rather than a fixed shape, so the
+   card grows instead of clipping. The tiles stay visually square whenever the
+   content genuinely fits. */
+@media (max-width: 480px) {
+  .home-card--square {
+    aspect-ratio: auto;
+    min-height: min(42vw, 150px);
+    padding: 0.9rem 0.7rem;
+  }
+
+  .home__secondary {
+    gap: 0.7rem;
+  }
+
+  .home-card--square .home-card__title {
+    font-size: 1rem;
+    line-height: 1.3;
+  }
+
+  .home-card--square .home-card__desc {
+    font-size: 0.82rem;
+    line-height: 1.4;
+  }
+
+  /* Long words ("Refuge", place names) must wrap rather than force the grid
+     track wider than half the screen. */
+  .home-card--square .home-card__body {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+}
+
 .home-card__badge {
   font-size: 0.75rem;
   padding: 0.15rem 0.55rem;
@@ -738,7 +787,10 @@ input {
   white-space: nowrap;
 }
 
-@media (max-width: 420px) {
+/* 480px, not 420px. Current large phones report 430-448 CSS px (iPhone 15 Pro
+   Max 430, Pixel 8 Pro 448), so a 420px ceiling skipped the compaction on
+   exactly the handsets most likely to be used to demo this. */
+@media (max-width: 480px) {
   .home__support-row {
     gap: 0.4rem;
   }
@@ -890,4 +942,80 @@ input {
 
 .route-card__journey .field-note {
   margin: 0.5rem 0 0;
+}
+
+/* ---------- Narrow-screen safety net ----------
+   Scoped to mobile widths on purpose: the desktop layout uses position:sticky
+   for the map pane, and an overflow rule on a shared ancestor would clip it. */
+
+@media (max-width: 480px) {
+  /* One overflowing child drags the whole page sideways, which on a phone
+     reads as "the app is broken" even when only a single label is too wide.
+     clip contains it without creating a scroll container, so sticky elsewhere
+     is unaffected. */
+  body {
+    overflow-x: clip;
+  }
+
+  .layout,
+  .back-nav,
+  .home {
+    padding-left: 0.85rem;
+    padding-right: 0.85rem;
+  }
+
+  /* Place names from the geocoder are long and unbroken ("Melbourne Central
+     Station Pharmacy, Melbourne, VIC"). Without this they set a minimum width
+     wider than the screen and every ancestor inherits the overflow. */
+  .route-card__title-row h3,
+  .place-field label,
+  .suggestions button,
+  .refuge-list li,
+  .worst-panel,
+  .home-card__desc {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  /* The title row is flex with a badge beside it; without min-width:0 the
+     heading refuses to shrink and pushes the badge off the card edge. */
+  .route-card__title-row {
+    min-width: 0;
+  }
+
+  .route-card__title-row h3 {
+    flex: 1;
+  }
+
+  .badge {
+    flex-shrink: 0;
+  }
+
+  /* Callouts are anchored to map pins, so a fixed 220px can hang off the edge
+     of a 360px map. Keeping them inside the shell keeps the text readable. */
+  .worst-callout,
+  .refuge-callout {
+    max-width: min(220px, 62vw);
+  }
+
+  .map-pin__label {
+    max-width: min(180px, 55vw);
+  }
+
+  /* Horizontally scrolling pill row: give it momentum scrolling and hide the
+     scrollbar, which otherwise overlaps the pills on iOS. */
+  .home__support-row {
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    scroll-padding-left: 0.85rem;
+  }
+
+  .home__support-row::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* The legend's two-column grid has no room to be two columns down here. */
+  .legend {
+    grid-template-columns: 1fr;
+  }
 }
