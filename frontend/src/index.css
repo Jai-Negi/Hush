@@ -104,9 +104,15 @@ input {
 }
 
 .logo {
+  font: inherit;
   font-weight: 700;
   font-size: 1.3rem;
   margin-right: 0.6rem;
+  padding: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  cursor: pointer;
 }
 
 .logo-sub {

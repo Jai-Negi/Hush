@@ -238,7 +238,14 @@ export default function App() {
     <div className="app">
       <header className="app-header">
         <div>
-          <span className="logo">hush</span>
+          <button
+            type="button"
+            className="logo"
+            onClick={() => setScreen('home')}
+            aria-label="Go to home"
+          >
+            hush
+          </button>
           <span className="logo-sub">Sensory-aware wayfinding · Melbourne CBD</span>
         </div>
         {screen === 'plan' ? (
