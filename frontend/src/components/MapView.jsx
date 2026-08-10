@@ -56,6 +56,13 @@ export function MapView({
 }) {
   const mapRef = useRef(null);
   const [selectedRefuge, setSelectedRefuge] = useState(null);
+  // Set by the fit-to-points effect below; re-invoked by the ResizeObserver
+  // so a container resize re-fits the view instead of only resizing the
+  // canvas. Without this, a fit computed against a still-collapsing (0-size)
+  // container leaves the map's zoom/center permanently invalid — resize()
+  // alone corrects the canvas pixels but never recovers a valid viewport,
+  // so MapLibre requests zero tiles and the map stays a grey box.
+  const fitViewRef = useRef(() => {});
 
   useEffect(() => {
     const map = mapRef.current?.getMap?.();
@@ -64,6 +71,7 @@ export function MapView({
 
     const observer = new ResizeObserver(() => {
       map.resize();
+      fitViewRef.current();
     });
     observer.observe(container);
 
@@ -102,32 +110,37 @@ export function MapView({
     const map = mapRef.current?.getMap?.();
     if (!map) return;
 
-    // Screens swap instantly (no route/page transition), so a map mounting
-    // into a freshly-shown grid cell can read its container's size before
-    // CSS layout has settled, leaving the canvas narrower than its now-
-    // correctly-sized container. Force a resize before fitting to points.
-    map.resize();
+    const fitView = () => {
+      // Screens swap instantly (no route/page transition), so a map mounting
+      // into a freshly-shown grid cell can read its container's size before
+      // CSS layout has settled, leaving the canvas narrower than its now-
+      // correctly-sized container. Force a resize before fitting to points.
+      map.resize();
 
-    if (routes && routes.length > 0) {
-      const points = [];
-      for (const r of routes) {
-        for (const [lon, lat] of r.geometry.coordinates) points.push([lon, lat]);
+      if (routes && routes.length > 0) {
+        const points = [];
+        for (const r of routes) {
+          for (const [lon, lat] of r.geometry.coordinates) points.push([lon, lat]);
+        }
+        fitToPoints(map, points, { padding: 56 });
+        return;
       }
-      fitToPoints(map, points, { padding: 56 });
-      return;
-    }
 
-    if (refuges && refuges.length > 0) {
-      const points = refuges.map((r) => [r.lon, r.lat]);
+      if (refuges && refuges.length > 0) {
+        const points = refuges.map((r) => [r.lon, r.lat]);
+        if (from) points.push([from.lon, from.lat]);
+        fitToPoints(map, points, { padding: 64, maxZoom: 17 });
+        return;
+      }
+
+      const points = [];
       if (from) points.push([from.lon, from.lat]);
-      fitToPoints(map, points, { padding: 64, maxZoom: 17 });
-      return;
-    }
+      if (to) points.push([to.lon, to.lat]);
+      fitToPoints(map, points, { padding: 64, maxZoom: 15 });
+    };
 
-    const points = [];
-    if (from) points.push([from.lon, from.lat]);
-    if (to) points.push([to.lon, to.lat]);
-    fitToPoints(map, points, { padding: 64, maxZoom: 15 });
+    fitViewRef.current = fitView;
+    fitView();
   }, [routes, refuges, from, to]);
 
   // Journey mode: keep the device's live position centred as it updates.
