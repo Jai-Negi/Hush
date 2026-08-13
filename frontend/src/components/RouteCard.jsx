@@ -28,16 +28,52 @@ export function RouteCard({
   const [showWorst, setShowWorst] = useState(false);
   const badge = routeBadge(route, threshold);
   const flagged = worstIsFlagged(route, threshold);
+  const hasNoDataChip = route.segments_no_data > 0 && route.avg_density !== null;
 
   const className = ['route-card', selected ? 'route-card--selected' : '']
     .filter(Boolean)
     .join(' ');
 
+  // Rendered twice below (once at its original desktop position, once in
+  // the mobile-only merged row) — CSS shows only one copy per breakpoint,
+  // both driven by the same showWorst state so they can never disagree.
+  const worstToggle = route.worst ? (
+    <button
+      type="button"
+      className="disclosure"
+      aria-expanded={showWorst}
+      onClick={() => setShowWorst((v) => !v)}
+    >
+      Worst point on this route {flagged ? <span className="flag">!</span> : null}
+      <span className="disclosure__hint">{showWorst ? 'Hide' : 'Show'}</span>
+    </button>
+  ) : null;
+
+  const noDataChip = hasNoDataChip ? (
+    <p className="nodata-chip">
+      {route.segments_no_data} of {route.segments_total} segments — no sensor within 50 m
+    </p>
+  ) : null;
+
   return (
     <article className={className} aria-current={selected ? 'true' : undefined}>
       <button type="button" className="route-card__main" onClick={onSelect}>
         <div className="route-card__title-row">
-          <h3>{route.via ? `Via ${route.via}` : 'Walking route'}</h3>
+          <h3 className="route-card__title-line">
+            {/* Mobile-only: merges the arrival time onto the title line
+                instead of the separate .route-card__meta line below, so the
+                card takes one less row. CSS hides whichever copy doesn't
+                match the current breakpoint. The via-name (unpredictable
+                length) truncates first — the time is fixed-width and short,
+                so it always stays fully visible rather than getting clipped
+                whenever the street name happens to be long. */}
+            <span className="route-card__via">
+              {route.via ? `Via ${route.via}` : 'Walking route'}
+            </span>
+            <span className="route-card__meta-inline">
+              · {route.duration_min} min · arrives {arrivalTime(route.duration_min)}
+            </span>
+          </h3>
           <Badge kind={badge} />
         </div>
         <p className="route-card__meta">
@@ -56,41 +92,35 @@ export function RouteCard({
             No sensor close enough to this route to measure it. Not assumed calm.
           </p>
         )}
-        {route.segments_no_data > 0 && route.avg_density !== null ? (
-          <p className="nodata-chip">
-            {route.segments_no_data} of {route.segments_total} segments — no sensor within
-            50 m
-          </p>
-        ) : null}
+        {noDataChip}
       </button>
 
-      {route.worst ? (
-        <div className="route-card__worst">
-          <button
-            type="button"
-            className="disclosure"
-            aria-expanded={showWorst}
-            onClick={() => setShowWorst((v) => !v)}
-          >
-            Worst point on this route {flagged ? <span className="flag">!</span> : null}
-            <span className="disclosure__hint">{showWorst ? 'Hide' : 'Show'}</span>
-          </button>
-          {showWorst ? (
-            <div className="worst-panel">
-              <p>
-                <strong>{Math.round(route.worst.value)} people/min</strong> —{' '}
-                {route.worst.street}
-              </p>
-              <p>
-                {flagged
-                  ? `More than double this route's average, and above your ${threshold}/min limit. ` +
-                    `The badge stays ${badge} — the average still describes the whole trip.`
-                  : route.worst.value > threshold
-                    ? `Above your ${threshold}/min limit, but close to this route's average.`
-                    : `Below your ${threshold}/min limit.`}
-              </p>
-            </div>
-          ) : null}
+      {/* Mobile-only merged row: the "no data" chip and the worst-point
+          toggle share one line, toggle pinned to the right end. Hidden on
+          desktop, which keeps the chip above (inside the button) and the
+          toggle below in .route-card__worst, untouched. */}
+      {hasNoDataChip || route.worst ? (
+        <div className="route-card__info-row">
+          {noDataChip}
+          {worstToggle}
+        </div>
+      ) : null}
+
+      {route.worst ? <div className="route-card__worst">{worstToggle}</div> : null}
+
+      {showWorst && route.worst ? (
+        <div className="worst-panel">
+          <p>
+            <strong>{Math.round(route.worst.value)} people/min</strong> — {route.worst.street}
+          </p>
+          <p>
+            {flagged
+              ? `More than double this route's average, and above your ${threshold}/min limit. ` +
+                `The badge stays ${badge} — the average still describes the whole trip.`
+              : route.worst.value > threshold
+                ? `Above your ${threshold}/min limit, but close to this route's average.`
+                : `Below your ${threshold}/min limit.`}
+          </p>
         </div>
       ) : null}
 
@@ -106,14 +136,6 @@ export function RouteCard({
             </button>
           )}
           {journeyNotice ? <p className="field-note">{journeyNotice}</p> : null}
-        </div>
-      ) : null}
-      {selected && !journeyAvailable ? (
-        <div className="route-card__journey">
-          <p className="field-note">
-            Start is only available when this trip begins at your current location —
-            plan from &ldquo;Use my current location&rdquo; to turn-by-turn this route.
-          </p>
         </div>
       ) : null}
     </article>
