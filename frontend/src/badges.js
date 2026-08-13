@@ -20,3 +20,18 @@ export function worstIsFlagged(route, threshold) {
   }
   return route.worst.value > threshold && route.worst.value > 2 * route.avg_density;
 }
+
+// Quietest first: LOW routes before HIGH, unmeasured routes last (neither
+// confirmed calm nor confirmed loud, but least informative to lead with).
+const BADGE_RANK = { LOW: 0, HIGH: 1, 'NO DATA': 2 };
+
+/** Reorders routes calm-first: LOW, then HIGH, then NO DATA. Within a group,
+ * lower average pedestrian count comes first. */
+export function sortRoutesByCalm(routes, threshold) {
+  return [...routes].sort((a, b) => {
+    const rankDiff = BADGE_RANK[routeBadge(a, threshold)] - BADGE_RANK[routeBadge(b, threshold)];
+    if (rankDiff !== 0) return rankDiff;
+    if (a.avg_density === null || b.avg_density === null) return 0;
+    return a.avg_density - b.avg_density;
+  });
+}

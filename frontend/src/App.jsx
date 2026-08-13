@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import { getRefuges, getStatus, planRoutes } from './api';
+import { sortRoutesByCalm } from './badges';
 import { RouteCard } from './components/RouteCard';
 import { Legend } from './components/Legend';
 import { MapView } from './components/MapView';
 import { PlaceField } from './components/PlaceField';
+import { FlagIcon, PinIcon } from './components/icons';
 import { ThresholdControl } from './components/ThresholdControl';
 import { StatusBar } from './components/StatusBar';
 import { RefugePanel } from './components/RefugePanel';
@@ -34,6 +36,9 @@ export default function App() {
   const [from, setFrom] = useState(null);
   const [to, setTo] = useState(null);
   const [result, setResult] = useState(null);
+  // Once routes come back, the full trip form collapses to a compact
+  // From/To bar. Tapping "Edit" re-expands it until the next search lands.
+  const [editingTrip, setEditingTrip] = useState(false);
   const [selectedId, setSelectedId] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -46,6 +51,13 @@ export default function App() {
   const [refugeOrigin, setRefugeOrigin] = useState(null);
   const [refugeLoading, setRefugeLoading] = useState(false);
   const [refugeNote, setRefugeNote] = useState(null);
+  // True once we know GPS isn't giving us a position (denied, unavailable,
+  // or timed out) — that's when the manual location search appears.
+  const [refugeGpsDenied, setRefugeGpsDenied] = useState(false);
+  // Mirrors the trip planner's collapse-on-result pattern: the search field
+  // + quick-picks show while choosing a location, then collapse to a
+  // one-line bar once one is picked, so the results aren't pushed down.
+  const [refugeEditingLocation, setRefugeEditingLocation] = useState(true);
 
   useEffect(() => {
     getStatus()
@@ -112,8 +124,10 @@ export default function App() {
     stopJourney();
     try {
       const res = await planRoutes(fromPlace, toPlace);
-      setResult(res);
-      setSelectedId(res.routes[0]?.id ?? null);
+      const sortedRoutes = sortRoutesByCalm(res.routes, threshold);
+      setResult({ ...res, routes: sortedRoutes });
+      setSelectedId(sortedRoutes[0]?.id ?? null);
+      setEditingTrip(false);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -194,8 +208,10 @@ export default function App() {
 
   // Shown automatically on arrival at the refuge screen — no click needed.
   // Lives here, not inside RefugePanel, because the map on that screen needs
-  // the same refuges + origin the list does.
-  function findNearbyRefuges() {
+  // the same refuges + origin the list does. Priority: live GPS position →
+  // (if that's not available) a place the user searches for → the CBD centre
+  // as a last resort, never silently reusing the trip planner's own "from".
+  function findNearbyRefuges(searchedPlace) {
     setRefugeLoading(true);
     setRefugeNote(null);
 
@@ -204,7 +220,6 @@ export default function App() {
         const { refuges: found } = await getRefuges(lat, lon);
         setRefuges(found);
         setRefugeOrigin({ lat, lon, label: label || 'Current location' });
-        if (label) setRefugeNote(`Showing quiet spaces near ${label}.`);
       } catch (err) {
         setRefugeNote(err.message);
       } finally {
@@ -212,24 +227,38 @@ export default function App() {
       }
     };
 
+    if (searchedPlace) {
+      setRefugeGpsDenied(true);
+      setRefugeEditingLocation(false);
+      fetchFor(searchedPlace.lat, searchedPlace.lon, searchedPlace.label);
+      return;
+    }
+
+    const fallbackToDefault = () => {
+      setRefugeGpsDenied(true);
+      setRefugeEditingLocation(true);
+      setRefugeNote(
+        `Showing quiet spaces near ${DEFAULT_REFUGE_POINT.label} — search above to look near a different place.`,
+      );
+      fetchFor(DEFAULT_REFUGE_POINT.lat, DEFAULT_REFUGE_POINT.lon, DEFAULT_REFUGE_POINT.label);
+    };
+
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
-        (pos) => fetchFor(pos.coords.latitude, pos.coords.longitude, null),
-        () => {
-          const p = from || DEFAULT_REFUGE_POINT;
-          fetchFor(p.lat, p.lon, p.label || DEFAULT_REFUGE_POINT.label);
+        (pos) => {
+          setRefugeGpsDenied(false);
+          fetchFor(pos.coords.latitude, pos.coords.longitude, null);
         },
+        fallbackToDefault,
         { timeout: 8000 },
       );
     } else {
-      const p = from || DEFAULT_REFUGE_POINT;
-      fetchFor(p.lat, p.lon, p.label || DEFAULT_REFUGE_POINT.label);
+      fallbackToDefault();
     }
   }
 
   useEffect(() => {
     if (screen === 'refuge') findNearbyRefuges();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [screen]);
 
   const hasRoutes = result && result.routes.length > 0;
@@ -273,7 +302,14 @@ export default function App() {
               loading={refugeLoading}
               note={refugeNote}
               onPlanRoute={planRouteTo}
-              onRefresh={findNearbyRefuges}
+              onRefresh={() => findNearbyRefuges()}
+              gpsDenied={refugeGpsDenied}
+              onSearchLocation={findNearbyRefuges}
+              tripFrom={from}
+              tripTo={to}
+              origin={refugeOrigin}
+              editingLocation={refugeEditingLocation}
+              onEditLocation={() => setRefugeEditingLocation(true)}
             />
           </div>
           <div className="layout__map">
@@ -290,66 +326,86 @@ export default function App() {
       ) : null}
 
       {screen === 'plan' ? (
-        <main className="layout">
-          <div className="layout__panel">
-            <section className="card" aria-label="Plan a trip">
-              <h1>Plan your trip</h1>
-              <p className="field-note">
-                Search for a start and destination in central Melbourne. Your start
-                defaults to your current location when GPS is available.
+        <main className={`layout${hasRoutes && !editingTrip ? ' layout--results' : ''}`}>
+          {hasRoutes && !editingTrip ? (
+            <div className="trip-bar layout__topbar">
+              <p className="trip-bar__route">
+                <PinIcon size={16} />
+                {from?.label}
+                <span className="trip-bar__arrow">→</span>
+                <FlagIcon size={16} />
+                {to?.label}
               </p>
-              <PlaceField
-                id="from"
-                label="From"
-                value={from}
-                onSelect={setFrom}
-                onUseCurrentLocation={applyCurrentLocation}
-                tag={from?.label === 'Current location' ? 'Current location' : null}
-              />
-              <PlaceField id="to" label="To" value={to} onSelect={setTo} />
-
-              {favourites.length > 0 ? (
-                <div className="favourites">
-                  <p className="field-note">Saved places (kept on this device):</p>
-                  <ul>
-                    {favourites.map((p) => (
-                      <li key={p.label}>
-                        <button
-                          type="button"
-                          className="chip"
-                          onClick={() => (from ? setTo(p) : setFrom(p))}
-                          title={from ? 'Use as destination' : 'Use as start'}
-                        >
-                          {p.label}
-                        </button>
-                        <button
-                          type="button"
-                          className="chip chip--remove"
-                          aria-label={`Remove ${p.label} from saved places`}
-                          onClick={() => removeFavourite(p.label)}
-                        >
-                          Remove
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ) : null}
-
-              <button type="button" className="button" onClick={findRoutes} disabled={loading}>
-                {loading ? 'Finding calmer routes…' : 'Find calmer routes'}
+              <button
+                type="button"
+                className="link-button trip-bar__edit"
+                onClick={() => setEditingTrip(true)}
+              >
+                Edit
               </button>
+            </div>
+          ) : null}
 
-              {to ? (
-                <button
-                  type="button"
-                  className="link-button"
-                  onClick={() => saveFavourite(to)}
-                >
-                  Save “{to.label}” to this device
+          <div className="layout__panel">
+            {hasRoutes && !editingTrip ? null : (
+              <section className="card card--trip" aria-label="Plan a trip">
+                <h1>Plan your trip</h1>
+                <p className="field-note">
+                  Search for a start and destination in central Melbourne.
+                </p>
+                <PlaceField
+                  id="from"
+                  label="From"
+                  value={from}
+                  onSelect={setFrom}
+                  onUseCurrentLocation={applyCurrentLocation}
+                  tag={from?.label === 'Current location' ? 'Current location' : null}
+                />
+                <PlaceField id="to" label="To" value={to} onSelect={setTo} />
+
+                {favourites.length > 0 ? (
+                  <div className="favourites">
+                    <p className="field-note">Saved places (kept on this device):</p>
+                    <ul>
+                      {favourites.map((p) => (
+                        <li key={p.label}>
+                          <button
+                            type="button"
+                            className="chip"
+                            onClick={() => (from ? setTo(p) : setFrom(p))}
+                            title={from ? 'Use as destination' : 'Use as start'}
+                          >
+                            {p.label}
+                          </button>
+                          <button
+                            type="button"
+                            className="chip chip--remove"
+                            aria-label={`Remove ${p.label} from saved places`}
+                            onClick={() => removeFavourite(p.label)}
+                          >
+                            Remove
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
+
+                <button type="button" className="button" onClick={findRoutes} disabled={loading}>
+                  {loading ? 'Finding calmer routes…' : 'Find calmer routes'}
                 </button>
-              ) : null}
-            </section>
+
+                {to ? (
+                  <button
+                    type="button"
+                    className="link-button"
+                    onClick={() => saveFavourite(to)}
+                  >
+                    Save “{to.label}” to this device
+                  </button>
+                ) : null}
+              </section>
+            )}
 
             {error ? (
               <div className="notice" role="alert">
@@ -364,7 +420,7 @@ export default function App() {
                   {result.routes.length === 1 ? 'option' : 'options'}
                 </h2>
                 <p className="field-note">
-                  Sorted by arrival. All routes are shown — none are hidden from you.
+                  Sorted by how calm each route is — quietest first.
                 </p>
                 {result.routes.map((r) => (
                   <RouteCard

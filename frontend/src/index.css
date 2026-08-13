@@ -166,6 +166,206 @@ input {
   padding: 1.25rem;
 }
 
+/* Sleeker "Plan a trip" card — less padding, tighter heading, still full
+   height content (fields, favourites, button all stay). */
+.card--trip {
+  padding: 0.9rem 1rem;
+}
+
+.card--trip h1 {
+  font-size: 1.15rem;
+  margin-bottom: 0.3rem;
+}
+
+/* Once routes are back, the full trip form collapses to the one-line
+   From/To bar (.layout__topbar, full width). Below that, phone and laptop
+   deliberately diverge:
+   - Phone: stacked, map first — the map is the prominent element right
+     under the search bar with the route list scrolling below it, the way
+     Google Maps' mobile view works, not squeezed into a side column.
+   - Laptop (≥1024px): side-by-side (route list | map), same as before. */
+.layout--results {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.layout--results .layout__map {
+  order: 1;
+}
+
+.layout--results .layout__panel {
+  order: 2;
+}
+
+@media (min-width: 1024px) {
+  .layout--results {
+    display: grid;
+    grid-template-columns: minmax(210px, 38%) 1fr;
+    grid-template-areas: 'topbar topbar' 'panel map';
+    align-items: start;
+    gap: 0.75rem;
+  }
+
+  .layout--results .layout__topbar {
+    grid-area: topbar;
+  }
+
+  .layout--results .layout__panel {
+    grid-area: panel;
+  }
+
+  .layout--results .layout__map {
+    grid-area: map;
+    position: sticky;
+    top: 1rem;
+  }
+
+  .layout--results .route-card__main {
+    padding: 0.7rem 0.8rem;
+  }
+
+  .layout--results .route-card__title-row h3 {
+    font-size: 0.92rem;
+  }
+
+  .layout--results .route-card__meta,
+  .layout--results .route-card__density {
+    font-size: 0.85rem;
+  }
+}
+
+/* Mobile-only route card layout — hidden by default (desktop never matches
+   the max-width query below, so it's genuinely untouched, not just visually
+   similar). Merges the arrival time onto the title line and the "no data"
+   chip + worst-point toggle onto one shared row, so each card takes fewer
+   rows and more fit on screen without scrolling. .route-card__meta-inline
+   and .route-card__info-row are new elements built for this — their
+   groupings differ from the desktop originals (.route-card__meta,
+   .route-card__worst), not just their order, so they're duplicated in the
+   markup rather than reflowed with plain CSS. */
+.route-card__meta-inline,
+.route-card__info-row {
+  display: none;
+}
+
+@media (max-width: 1023.98px) {
+  .layout--results .layout__map {
+    position: sticky;
+    top: 0.6rem;
+  }
+
+  .route-card__meta,
+  .route-card__worst,
+  .route-card__main .nodata-chip {
+    display: none;
+  }
+
+  .route-card {
+    margin-bottom: 0.6rem;
+  }
+
+  .route-card__main {
+    padding: 0.7rem 0.85rem;
+  }
+
+  /* Title line: via-name truncates first (unpredictable length), the
+     duration/arrival text is fixed-width and stays fully visible. */
+  .route-card__title-row h3 {
+    font-size: 0.95rem;
+  }
+
+  .route-card__title-line {
+    display: flex;
+    align-items: baseline;
+    min-width: 0;
+    flex: 1;
+  }
+
+  .route-card__via {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+  }
+
+  .route-card__meta-inline {
+    display: inline-block;
+    flex-shrink: 0;
+    white-space: nowrap;
+    color: var(--ink-soft);
+    font-weight: 400;
+    font-size: 0.8rem;
+  }
+
+  .route-card__title-row .badge {
+    flex-shrink: 0;
+  }
+
+  .route-card__density {
+    font-size: 0.85rem;
+  }
+
+  /* Info row: the chip's text length varies with segment count, so it
+     truncates first; the toggle button's short label always stays
+     readable and pinned to the right end. */
+  .route-card__info-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    border-top: 1px solid var(--line);
+    padding: 0.3rem 1rem 0.5rem;
+  }
+
+  .route-card__info-row .nodata-chip {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+    flex-shrink: 1;
+    margin-top: 0;
+  }
+
+  .route-card__info-row .disclosure {
+    width: auto;
+    flex-shrink: 0;
+    white-space: nowrap;
+    margin-left: auto;
+    font-size: 0.85rem;
+    gap: 0.35rem;
+  }
+}
+
+.trip-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 0.6rem 0.9rem;
+}
+
+.trip-bar__route {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+  margin: 0;
+  font-size: 0.9rem;
+  min-width: 0;
+}
+
+.trip-bar__arrow {
+  color: var(--ink-soft);
+}
+
+.trip-bar__edit {
+  flex-shrink: 0;
+  padding: 0.4rem 0;
+}
+
 .link-button {
   background: none;
   border: none;
@@ -352,6 +552,7 @@ input {
 .worst-panel {
   font-size: 0.9rem;
   color: var(--ink-soft);
+  padding: 0 1rem 0.6rem;
 }
 
 .flag {
@@ -743,6 +944,70 @@ input {
   }
 }
 
+/* Same stacked layout as mobile, just a wider column on a laptop screen —
+   left at 560px there was too much bare page around it. Text and box
+   padding/min-height are doubled from their mobile values (not just bumped)
+   so the laptop screen reads as a deliberately larger presentation, not a
+   slightly-stretched phone view. The intro text (h1 1.35rem → 2.7rem) still
+   gets the largest values so it stays the dominant heading over the
+   doubled-but-smaller box text below it. Placed after the base .home-card*
+   rules above (not right after .home__options where it originally lived) —
+   media queries don't add specificity, so a same-specificity unconditional
+   rule appearing later in the file would otherwise win the cascade even
+   while this query's condition is true. */
+@media (min-width: 1024px) {
+  .home {
+    max-width: 960px;
+  }
+
+  .home__slogan {
+    font-size: 2.25rem;
+  }
+
+  .home__intro h1 {
+    font-size: 2.7rem;
+  }
+
+  .home__intro .field-note {
+    font-size: 1.8rem;
+  }
+
+  .home-card {
+    padding: 2.2rem 2.4rem;
+  }
+
+  .home-card--primary {
+    padding: 3.2rem 2.8rem;
+    min-height: 256px;
+  }
+
+  .home-card--square {
+    padding: 2rem;
+  }
+
+  .home-card__title {
+    font-size: 2.1rem;
+  }
+
+  .home-card--primary .home-card__title {
+    font-size: 2.4rem;
+  }
+
+  .home-card__desc {
+    font-size: 1.8rem;
+  }
+
+  .home-card--primary .icon {
+    width: 64px;
+    height: 64px;
+  }
+
+  .home-card--square .icon {
+    width: 52px;
+    height: 52px;
+  }
+}
+
 .home-card__badge {
   font-size: 0.75rem;
   padding: 0.15rem 0.55rem;
@@ -835,8 +1100,42 @@ input {
 .refuge-card__head {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
+  align-items: center;
   gap: 0.8rem;
+}
+
+.refuge-card__head h2 {
+  margin: 0;
+  font-size: 1.15rem;
+}
+
+/* The base .button is a full-width block (right for a primary CTA) — too
+   big sitting next to a heading. Scoped here rather than changed globally,
+   since RouteCard's "Stop navigating" button intentionally stays full-width. */
+.refuge-card__head .button--secondary {
+  display: inline-flex;
+  align-items: center;
+  width: auto;
+  flex-shrink: 0;
+  min-height: 44px;
+  padding: 0.5rem 1rem;
+  background: var(--surface);
+  color: var(--ink);
+  border: 1.5px solid var(--line-strong);
+}
+
+.refuge-card .place-field {
+  margin: 0.6rem 0;
+}
+
+.refuge-quick-picks {
+  margin: 0 0 0.6rem;
+}
+
+.refuge-quick-picks__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
 }
 
 .refuge-list {
@@ -855,6 +1154,27 @@ input {
 .refuge-list span {
   color: var(--ink-soft);
   font-size: 0.9rem;
+}
+
+/* On a phone screen only the first 3 results show, with "See more" to reveal
+   the rest — a long list pushes the map far down otherwise. A laptop screen
+   has room, so every result shows there regardless of the toggle. */
+.refuge-list li:nth-child(n + 4) {
+  display: none;
+}
+
+.refuge-list--expanded li:nth-child(n + 4) {
+  display: flex;
+}
+
+@media (min-width: 1024px) {
+  .refuge-list li:nth-child(n + 4) {
+    display: flex;
+  }
+
+  .refuge-list__more {
+    display: none;
+  }
 }
 
 .map-pin-btn {
